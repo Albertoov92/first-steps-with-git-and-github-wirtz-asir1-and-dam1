@@ -42,14 +42,20 @@ La tabla está compuesta de cinco columnas **(name, continent, area, population 
 ```SQL
 SELECT name
 FROM world
-WHERE continent = 'Africa';
---Utilizamos el comparador '=' para comprobar que continent es exactamente igual a 'Africa'
+WHERE continent = 'Africa'
+ORDER BY name;
+/*Utilizamos el comparador '=' para comprobar que 'continent' es exactamente igual a 'Africa' y
+finalmente ordenamos la lista según las letras del abecedario (por defecto con el valor ASC pero
+podemos especificar que sea DESC, así los ordenará por orden inverso: ORDER BY name DESC).
+*/
 ```
 
-* Las consultas SQL siempre acaban en **;**.
-* Para poner comentarios de una línea utilizamos doble guión: ```--COMENTARIO``` y para los de varias líneas los encerramos en barra y asterisco: 
+- Las consultas SQL siempre acaban en **;**.
+- Las cláusulas y funciones de SQL se pueden escibir en minúsculas o mayúsculas. Esto puede variar en el caso de los nombres de las tablas o columnas dependiendo
+del sistema gestor.
+- Para poner comentarios de una línea utilizamos doble guión: ```--COMENTARIO``` y para los de varias líneas los encerramos en barra y asterisco:
 
-```
+```text
 /*
 COMENTARIO 1
 COMENTARIO 2
@@ -70,13 +76,40 @@ WHERE name = 'Australia' AND c IN ('Africa', 'Oceania', 'Asia');
 * Para que el código sea más legible, podemos renombrar las columnas para nuestra consulta con **`AS`**.
 * Para concatenar predicados utilizamos la cláusula **`AND`**.
 
+```SQL
+SELECT name, population
+FROM world
+WHERE name in ('Sweden', 'Norway', 'Denmark', 'Russia')
+ORDER BY population ASC;
+```
+
 Otra cláusula que podemos utilizar para enfocar aún más nuestra consulta es **`BETWEEN`**. Con esta cláusula podemos indicar que queremos valores comprendidos en un rango en concreto.
 Por ejemplo, si quisiéramos saber qué países del continente asiático tienen una población total de entre 25 y 50 millones ejecutamos la siguiente consulta:
 
 ```SQL
-SELECT name, population
+SELECT upper(name), population
 FROM world
 WHERE continent = 'Asia' AND population BETWEEN 25000000 AND 50000000;
+
+/*
+Con la función 'upper' le indicamos que queremos el nombre de los países en mayúsculas. También disponemos de la función lower(),
+que hace lo contrario.
+*/
+```
+
+```SQL
+SELECT name, population
+FROM world
+WHERE population BETWEEN 50000000 AND 100000000
+ORDER BY population;
+```
+
+```SQL
+SELECT name AS Nombre, area
+FROM world
+WHERE name BETWEEN 'D' AND 'F';
+
+--WHERE name >= 'D' AND <= 'F';
 ```
 
 Otra cláusula es **`ROUND`**, que nos permite redondear valores numéricos:
@@ -115,16 +148,32 @@ FROM world
 -- El segundo argumento indica el número de caracteres que queremos aislar
 ```
 
+Si queremos obtener resultados que son la unión de dos o más datos en una tabla, disponemos de la cláusula **`CONCAT`**:
+
+```SQL
+SELECT name
+FROM world
+WHERE capital = CONCAT(name, ' City');
+
+-- Obtenemos los países cuya capital sea el nombre del propio país más la cadena 'City'
+```
+
 Con la cláusula **`LIKE`** podemos emplear expresiones regulares:
 
 ```SQL
 SELECT name
 FROM world
-WHERE name LIKE 'Sw_%';
+WHERE name LIKE 'Sw_%' LIMIT 1;
 
 /*
 Primero indicamos que el nombre del país tiene que empezar por una S seguida de la letra w, después -obligatoriamente- tiene
-que haber un caracter más (_) y después de éste puede haber 0, 3 o infinitos caracteres (%). Esta consulta nos devuelve como resultado:
+que haber un caracter más (_) y después de éste puede haber 0, 3 o infinitos caracteres (%). Finalmente indicamos con la cláusula
+LIMIT, que sólo queremos el primer valor que concuerde con las condiciones que establecimos. Esta consulta nos devuelve como resultado:
+
+- Swaziland
+
+Si no hubiésemos utilizado LIMIT nos habría devuelto:
+
 - Swaziland
 - Sweden
 - Switzerland
@@ -148,20 +197,148 @@ WHERE name LIKE 'Y%';
 */
 ```
 
+---
+
 ### Operadores de comparación
 
 En SQL disponemos de los operadores de comparación comunes a otros lenguajes:
 
-- **=**: Comprueba si un valor es exáctamente igual a otro.
-- **<> - !=**: Comprueba si un valor es distinto a otro. (El operador <> es el incluido en el estándar SQL-92, por lo que es más recomendable utilizarlo en lugar de !=)
-- **>**: Comprueba si un valor es mayor que otro.
-- **<**: Comprueba si un valor es menor que otro.
-- **>=**: Comprueba si un valor es mayor e igual que otro.
-- **<=**: Comprueba si un valor es menor e igual que otro.
+**=** | Comprueba si un valor es exáctamente igual a otro.
+--- | ---
+**<> - !=** | Comprueba si un valor es distinto a otro. (El operador <> es el incluido en el estándar SQL-92, por lo que es más recomendable utilizarlo en lugar de !=)
+**>** | Comprueba si un valor es mayor que otro.
+**<** | Comprueba si un valor es menor que otro.
+**>=** | Comprueba si un valor es mayor e igual que otro.
+**<=** | Comprueba si un valor es menor e igual que otro.
 
 ### Operadores lógicos
 
-- **AND**: Comprueba si dos condiciones se cumplen.
-- **OR**: Comprueba si al menos una de dos condiciones se cumple.
-- **NOT**: Comprueba si de dos condiciones una de ellas no es cierta.
-- **XOR**: Comprueba si de dos condiciones una se cumple y otra no.
+**AND** | Comprueba si dos condiciones se cumplen.
+--- | ---
+**OR** | Comprueba si al menos una de dos condiciones se cumple.
+**NOT** | Comprueba si de dos condiciones una de ellas no es cierta.
+**XOR** | Comprueba si de dos condiciones una se cumple y otra no.
+
+**Ejemplos:**
+
+```SQL
+SELECT name, gdp/population
+FROM world
+WHERE population >= 200000000;
+```
+
+```SQL
+SELECT name, ROUND(gdp/population, -3)
+FROM world
+WHERE gdp >= 1000000000000;
+```
+
+```SQL
+SELECT name, population, area
+FROM world
+WHERE area >= 3000000 OR population >= 250000000;
+```
+
+```SQL
+SELECT name, population, area
+FROM world
+WHERE area >= 3000000 XOR population >= 250000000;
+```
+
+```SQL
+SELECT name, capital
+FROM world
+WHERE LEFT(name, 1) = LEFT(capital, 1) XOR name = capital;
+
+/*
+Devuelve los países junto con sus capitales donde la primera letra del país es igual a la
+primera letra de su capital o el país sea igual a la capital, pero no devuelve resultado
+cuando se cumple la condición lógica.
+*/
+```
+
+```SQL
+SELECT name, population
+FROM world
+
+--WHERE name IN ('France', 'Germany', 'Italy')
+
+WHERE name = 'France' OR name = 'Germany' OR name = 'Italy';
+
+--Una manera de reemplazar el IN.
+```
+
+```SQL
+SELECT name, capital
+FROM world
+WHERE LEFT(name, 1) = LEFT(capital, 1) AND name <> capital;
+
+/*Países donde la primera letra de su nombre sea igual a la primera de su capital, pero sólo cuando el nombre
+del país no sea igual al de la captial.
+*/
+```
+
+```SQL
+SELECT name
+FROM world
+WHERE name LIKE '%a%' AND name LIKE '%e%' AND name LIKE '%i%' AND name LIKE '%o%' AND name LIKE '%u%' AND name NOT LIKE '% %';
+
+--Países que contengan todas las vocales.
+```
+
+---
+
+```SQL
+SELECT name, population
+FROM world
+WHERE name >= 'Germany'
+LIMIT 5;
+
+/* Obtenemos los cinco primeros países que siguen el orden ascendente de las letras del abecedario
+teniendo en cuenta la cadena que le damos, en este caso 'Germany'.
+
+Como hemos elegido el operador >=, el primer resultado que tenemos es la propia cadena 'Germany'. A continuación,
+la consulta nos devuelve 'Ghana', ya que después de la letra G, la letra más pequeña en términos de orden es la
+h.
+
+Como tercer resultado tenemos 'Greece', por las mismas razones de arriba, y así hasta 'Guatemala'.
+*/
+```
+
+Podemos unir las expresiones regulares con las concatenaciones para especificar aún más cómo queremos que sea el resultado:
+
+```SQL
+SELECT capital, name 
+FROM world
+WHERE capital LIKE concat('%', name, '%');
+
+/*Obtenemos las capitales del mundo junto con su país, siempre y cuando la capital sea una combinación
+de 0 o más caracteres más el nombre del país, seguido de 0 o más caracteres
+*/
+```
+
+```SQL
+SELECT capital, name
+FROM world
+WHERE capital LIKE concat(name, '_%');
+```
+
+---
+
+**Función `REPLACE`: con esta función podemos buscar un patrón dentro de una cadena y reemplazarlo por otra cadena**
+
+```SQL
+SELECT name, REPLACE(capital, name, '') AS ext
+FROM world
+WHERE capital LIKE concat(name, '_%');
+
+/*
+Obtenemos los países junto con su capital y en el caso de que la capital sea una combinación de cualquier
+cadena de texto más el nombre de su país, reemplazamo el nombre del país por una cadena vacía, obteniendo
+así sólo una especie de extensión del país.
+```
+
+---
+
+### Subconsultas
+
