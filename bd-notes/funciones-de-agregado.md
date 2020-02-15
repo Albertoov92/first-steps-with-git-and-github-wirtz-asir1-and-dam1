@@ -96,7 +96,7 @@ Por lo tanto si sólo existe un único grupo, el resultado será una tabla con u
 
 ### Gotcha 1: `NULL`
 
-Los valores `NULL`. son eleiminado automáticamente antes de aplicar un _reductor_.
+Los valores `NULL` son eliminados automáticamente antes de aplicar un _reductor_.
 
 ### Gotcha 2: `List(a)` is empty
 
@@ -199,11 +199,45 @@ Tras haber formado los **grupos/subtablas** con `GROUP BY`, descartar aquellos g
 
 ## `WHERE`, `GROUP BY`, `HAVING`, `SELECT`
 
-**TODO**: Revisar esto. No está del todo claro.
-
 Este es precísamente el orden de ejecución.
 
 1. Ejecutamos el predicado del `WHERE` **en cada una de las tuplas**, filtrando aquellas que no lo cumplan.
 2. Ejecutamos el `GROUP BY` **en cada una de las tuplas**, haciendo grupos/subtablas según el criterio especificado.
 3. Ejecutamos el `HAVING` **una vez por cada grupo/subtabla**.
-4. Finalmente ejecutamos el `SELECT` **una vez por cada grupo/subtabla**.
+4. Ejecutamos el `SELECT` **una vez por cada grupo/subtabla**. => Se ejecuta `DISTINCT` si lo hay y finalmente `ORDER BY`
+
+---
+
+- El resultado de utilizar una función reductora como por ejemplo **`SUM`**, es que obtenemos una única
+subtabla, lo que entra en conflicto si al mismo tiempo estamos seleccionando una o más columnas que contienen
+varias tuplas de información. Utilizamos la función **`GROUP BY`** para agrupar esas tuplas en base a cualquier criterio
+que especifiquemos.
+
+---
+
+## Ejemplos
+
+![Tabla de ejemplo](img/tabla-world.PNG "sqlzoo.net")
+
+```SQL
+SELECT SUM(population), SUM(gdp)
+FROM world
+WHERE continent = 'Europe';
+```
+
+```SQL
+SELECT continent, COUNT(name)
+FROM world
+WHERE population >= 10000000 GROUP BY continent;
+
+--Por cada continente muestra el número de países que tienen al menos 10000000 de habitantes.
+```
+
+```SQL
+SELECT continent
+FROM world
+GROUP BY continent
+HAVING SUM(population) >= 100000000;
+
+--Continente con una población total de al menos 100000000.
+```

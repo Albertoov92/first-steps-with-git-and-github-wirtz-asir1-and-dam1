@@ -8,9 +8,9 @@
 
 ## **Sublenguajes de SQL**
 
-SQL es un único lenguaje compuesto de sublenguajes que pueden realizar por separado o conjuntamente con otros sublenguajes distintas operaciones que el usuario le pida. 
+SQL es un único lenguaje compuesto de sublenguajes que pueden realizar por separado o conjuntamente con otros sublenguajes distintas operaciones que el usuario le pida.
 
-Estos sublenguajes son: 
+Estos sublenguajes son:
 
 - **`DQL (Data Query Language)`**: Este sublenguaje se encarga de las consultas de los usuarios (obtener las columnas -atributos- de una tabla, obtener tuplas con información de una columna o la tabla al completo...).
   - **`SELECT`**
@@ -45,7 +45,7 @@ FROM world
 WHERE continent = 'Africa'
 ORDER BY name;
 /*Utilizamos el comparador '=' para comprobar que 'continent' es exactamente igual a 'Africa' y
-finalmente ordenamos la lista según las letras del abecedario (por defecto con el valor ASC pero
+finalmente ordenamos la lista por orden alfabético (por defecto con el valor ASC pero
 podemos especificar que sea DESC, así los ordenará por orden inverso: ORDER BY name DESC).
 */
 ```
@@ -55,7 +55,7 @@ podemos especificar que sea DESC, así los ordenará por orden inverso: ORDER BY
 del sistema gestor.
 - Para poner comentarios de una línea utilizamos doble guión: ```--COMENTARIO``` y para los de varias líneas los encerramos en barra y asterisco:
 
-```text
+```plaintext
 /*
 COMENTARIO 1
 COMENTARIO 2
@@ -63,6 +63,17 @@ COMENTARIO 3
 ...
 */
 ```
+
+---
+
+- **Operador asterico (*):** es un comodín que significa todo el contenido.
+
+```SQL
+SELECT *
+FROM world;
+```
+
+---
 
 Si queremos, por ejemplo, saber a qué continente pertenece Australia y sabemos que está en una lista dada de continentes utilizamos la cláusula **`IN`**:
 
@@ -72,9 +83,9 @@ FROM world
 WHERE name = 'Australia' AND c IN ('Africa', 'Oceania', 'Asia');
 ```
 
-* Podemos selccionar varias columnas de una tabla simplemente separando sus nombres por comas.
-* Para que el código sea más legible, podemos renombrar las columnas para nuestra consulta con **`AS`**.
-* Para concatenar predicados utilizamos la cláusula **`AND`**.
+- Podemos selccionar varias columnas de una tabla simplemente separando sus nombres por comas.
+- Para que el código sea más legible, podemos renombrar las columnas para nuestra consulta con **`AS`**.
+- Para concatenar predicados utilizamos la cláusula **`AND`**.
 
 ```SQL
 SELECT name, population
@@ -294,8 +305,8 @@ FROM world
 WHERE name >= 'Germany'
 LIMIT 5;
 
-/* Obtenemos los cinco primeros países que siguen el orden ascendente de las letras del abecedario
-teniendo en cuenta la cadena que le damos, en este caso 'Germany'.
+/*
+Obtenemos los cinco primeros países por orden alfabético teniendo en cuenta la cadena que le damos, en este caso 'Germany'.
 
 Como hemos elegido el operador >=, el primer resultado que tenemos es la propia cadena 'Germany'. A continuación,
 la consulta nos devuelve 'Ghana', ya que después de la letra G, la letra más pequeña en términos de orden es la
@@ -308,7 +319,7 @@ Como tercer resultado tenemos 'Greece', por las mismas razones de arriba, y así
 Podemos unir las expresiones regulares con las concatenaciones para especificar aún más cómo queremos que sea el resultado:
 
 ```SQL
-SELECT capital, name 
+SELECT capital, name
 FROM world
 WHERE capital LIKE concat('%', name, '%');
 
@@ -334,11 +345,131 @@ WHERE capital LIKE concat(name, '_%');
 
 /*
 Obtenemos los países junto con su capital y en el caso de que la capital sea una combinación de cualquier
-cadena de texto más el nombre de su país, reemplazamo el nombre del país por una cadena vacía, obteniendo
+cadena de texto más el nombre de su país, reemplazamos el nombre del país por una cadena vacía, obteniendo
 así sólo una especie de extensión del país.
+*/
 ```
 
 ---
 
 ### Subconsultas
+
+Las subconsultas son consultas embebidas utilizadas para obtener datos necesarios para realizar la consulta principal. Tienen un ámbito de ejecución
+distinto al de la principal, esto es, los datos de una tabla que utilizamos en una subsonsulta son una instancia aparte de la tabla, por lo que és como
+si copiáramos la tabla solo para realizar la subconsulta, así no se interfiere con los datos utilizados por la principal.
+
+Ejemplo:
+
+```SQL
+SELECT outerWorld.name, outerWorld.gdp/population
+FROM world AS outerWorld
+WHERE outerWorld.continent = 'Europe' AND outerWorld.gdp/population > (SELECT innerWorld.gdp/population
+                                                                      FROM world AS innerWorld
+                                                                      WHERE innerWorld.name = 'United Kingdom');
+
+/*
+Obtenemos el nombre y el PIB per capita de los países de Europa y cuyo PIB per capita es mayor
+que el de Reino Unido.
+
+En la consulta principal no hay manera de obtener el PIB per capita del Reino Unido en concreto, por lo
+que empleamos la subconsulta para obtener este dato y luego utilizarlo para la principal.
+*/
+```
+
+- Las subconsultas siempre van a la derecha del operador.
+- Aunque el ámbito de ejecución es distinto, para que el código sea más comprensible renombramos las tablas.
+
+```SQL
+SELECT name, population
+FROM world
+WHERE population > (SELECT population FROM world WHERE name = 'Canada') AND
+population < (SELECT population FROM world WHERE name = 'Poland');
+
+--Países cuya población sea mayor que la de Canadá y menor que la de Polonia.
+```
+
+```SQL
+SELECT name,
+      CONCAT(ROUND((population*100) / (SELECT population FROM world WHERE name = 'Germany'), 0), '%') AS poblacion
+
+FROM world
+WHERE continent = 'Europe';
+
+--Muestra los países de Europa junto con su población como porcentaje de la población de Alemania.
+```
+
+Para detallar aún más nuestra subconsulta disponemos de la cláusula **`ALL`**, que nos permite comprobar
+de una sentada los valores de la subconsulta que cumplen una condición.
+
+```SQL
+SELECT name
+FROM world
+WHERE population >= ALL(SELECT population
+                        FROM world
+                        WHERE population > 0);
+
+/*
+
+Devuelve el país con mayor población del mundo.
+
+Al utilizar la cláusula ALL los valores que devuelve la subconsulta se mantienen juntos mientras
+la consulta principal se va ejecutando y comprobando que la condición se cumple. Cada vez que la
+consulta principal encuentra un país cuya población es mayor o igual (no puede haber un país
+que tenga un población mayor que la suya propia) a la de la subconsulta, almacena el resultado hasta
+que aparezca otro país tenga una población mayor que la del almacenado.
+
+Si no hubiésemos utilizado la cláusula ALL, la consulta nos habría dado un error porque estaríamos trantando
+de comparar la población de un solo país con la población de la lista de cada país de la subconsulta a la vez.
+*/
+```
+
+```SQL
+SELECT name
+FROM world
+WHERE gdp > ALL(SELECT gdp
+                FROM world
+                WHERE continent = 'Europe' AND gdp IS NOT NULL); -- No funcionaria gdp <> NULL
+
+--Devuelve los países cuyo GDP es mayor al de los países de Europa
+```
+
+```SQL
+SELECT outerWorld.continent, outerWorld.name, outerWorld.area
+FROM world AS outerWorld
+WHERE outerWorld.area >= ALL
+    (SELECT area
+     FROM world AS innerWorld
+     WHERE innerWorld.continent = outerWorld.continent
+     AND innerWorld.area > 0);
+
+--Devuelve el país de cada continente que tiene el área más grande.
+```
+
+```SQL
+SELECT outerWorld.continent, outerWorld.name
+FROM world AS outerWorld
+WHERE outerWorld.name <= ALL
+                        (SELECT innerWorld.name
+                        FROM world AS innerWorld
+                        WHERE innerWorld.continent = outerWorld.continent
+                        AND innerWorld.name IS NOT NULL);
+
+--Lista cada continente y el nombre de su país que viene primero por orden alfabético.
+```
+
+```SQL
+SELECT outerWorld.name, outerWorld.continent
+FROM world AS outerWorld
+WHERE outerWorld.population > ALL
+                            (SELECT innerWorld.population*3
+                            FROM world AS innerWorld
+                            WHERE innerWorld.continent = outerWorld.continent AND outerWorld.name <> innerWorld.name
+                            AND population IS NOT NULL);
+
+--Devuelve los países de cada continente que tienen una población 3 veces mayor que cualquier otro del propio continente.
+```
+
+---
+
+### JOIN, INNER JOIN, LEFT JOIN y RIGHT JOIN
 
