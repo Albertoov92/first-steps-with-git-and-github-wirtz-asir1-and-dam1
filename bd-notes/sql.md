@@ -704,4 +704,108 @@ actor de una de las instancias sea Art Garfunkel.
 */
 ```
 
-### INNER JOIN
+### INNER JOIN, LEFT JOIN y RIGHT JOIN
+
+INNER JOIN funciona igual que un simple JOIN, solo que este no incluye las tuplas que tengan algún dato sin valor.
+
+Tablas de ejemplo:
+
+![Tabla teacher](img/tabla-teacher.PNG)
+![Tabla dept](img/tabla-dept.PNG)
+
+La siguiente consulta mostrará los profesores y sus departamentos, pero no mostrará los profesores que no tengan departamento
+o los departamentos que no tengan profesores:
+
+```SQL
+SELECT teacher.name, dept.name
+FROM teacher INNER JOIN dept
+                   ON (teacher.dept=dept.id);
+```
+
+Si queremos incluir todos los campos de una tabla aunque alguno esté vacío empleamos LEFT JOIN o RIGHT JOIN dependiendo
+de en qué lado hayamos puesto la tabla que consultamos:
+
+```SQL
+SELECT teacher.name, dept.name
+FROM teacher LEFT JOIN dept ON teacher.dept = dept.id;
+
+--Devuelve los profesores y sus departamentos, incluyendo los profesores que no tengan departamento.
+```
+
+```SQL
+SELECT teacher.name, dept.name
+FROM teacher RIGHT JOIN dept ON teacher.dept = dept.id;
+
+--Devuelve los profesores y sus departamentos, incluyendo los departamentos que estén vacíos.
+```
+
+---
+
+Si queremos seleccionar una columna que puede tener un campo vacío, ese campo lo podemos renombrar con la función **`COALESCE`**:
+
+```SQL
+SELECT teacher.name, COALESCE(teacher.mobile, '07986 444 2266')
+FROM teacher;
+```
+
+---
+
+```SQL
+SELECT teacher.name, COALESCE(dept.name, 'None') AS dept
+FROM teacher LEFT JOIN dept ON teacher.dept = dept.id;
+
+/*
+Devuelve una lista con todos los profesores y sus departamentos y en el caso de que no haya departamento sustituye
+el campo vacío por 'None'.
+*/
+```
+
+---
+
+## CASE
+
+La función CASE nos permite emplear condicionales:
+
+```SQL
+SELECT name,  --Muestra el nombre de los profesores
+CASE
+       WHEN teacher.dept = 1 OR teacher.dept = 2  --Si el departamento es el 1 o el 2...
+       THEN 'Sci' --Entonces devuelve Sci
+       ELSE 'Art' --Sino, Art
+END --Fin de los condicionales
+FROM teacher;
+```
+
+```SQL
+SELECT name,
+CASE
+       WHEN teacher.dept = 1 OR teacher.dept = 2
+       THEN 'Sci'
+       WHEN teacher.dept = 3
+       THEN 'Art'
+       ELSE 'None'  --Opción por defecto
+END
+FROM teacher;
+```
+
+---
+
+## Self JOIN
+
+El auto JOIN es un simple JOIN utilizado para unir una tabla consigo misma, pero con otro nombre para diferenciarse
+y con el propósito de comparar datos dentro de la misma tabla.
+
+Tablas de ejemplo:
+
+![Tabla stops](img/tabla-stops.PNG)
+![Tabla route](img/tabla-route.PNG)
+
+sqlzoo.net
+
+Obtener el id y el nombre de la parada de la ruta nº4 de LRT:
+
+```SQL
+SELECT stops.id, stops.name
+FROM stops JOIN route ON stops.id = route.stop
+WHERE route.num = 4 AND route.company = 'LRT';
+```
