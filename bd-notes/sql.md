@@ -473,3 +473,235 @@ WHERE outerWorld.population > ALL
 
 ### JOIN, INNER JOIN, LEFT JOIN y RIGHT JOIN
 
+La cláusula JOIN nos permite unir el resultado de dos tablas que están relacionadas y a las que consultamos.
+
+Supongamos las siguientes tablas de ejemplo:
+
+![Tabla game](img/tabla-game.PNG)
+![Tabla goal](img/tabla-goal.PNG)
+![Tabla eteam](img/tabla-eteam.PNG)
+
+Queremos saber los equipos que se enfrentaban cuando un jugador llamado Mario... marcó algún gol en cualquier partido.
+Los datos de los equipos están en la tabla **game**, pero los datos de los jugadores están en la tabla **goal**. Ambas tablas
+están relacionadas mediante el id del partido, por lo que al estar relacionadas y como necesitamos datos que se encuentran
+en una tabla y en la otra no, podemos unirlas mediante un JOIN, y el punto que las unirá será el atributo que comparten: **id**
+como atributo de la tabla **game** y **matchid** como clave foránea en la tabla **goal**:
+
+```SQL
+SELECT game.team1, game.team2, goal.player
+FROM game JOIN goal ON game.id = goal.matchid
+WHERE player LIKE 'Mario%';
+```
+
+```SQL
+SELECT goal.player, goal.teamid, eteam.coach, goal.gtime
+FROM goal JOIN eteam ON goal.teamid = eteam.id
+WHERE gtime <= 10;
+
+/*
+Devuelve el jugador, su equipo, su entrenador y el minuto en el que se marcó un gol en los primeros diez minutos
+de cualquier partido.
+*/
+```
+
+```SQL
+SELECT game.mdate, eteam.teamname
+FROM game JOIN eteam ON game.team1 = eteam.id
+WHERE eteam.coach = 'Fernando Santos';
+
+--Devuelve las fechas de los partidos, y el nombre del equipo en los que el entrenador del equipo nº1 fue Fernando Santos
+```
+
+```SQL
+SELECT DISTINCT player
+FROM game JOIN goal ON matchid = id
+WHERE (team1 = 'GER' OR team2 = 'GER') AND goal.teamid <> 'GER';
+
+--Devuelve todos los jugadores que le han marcado algún gol a Alemania alguna vez.
+
+/*
+- Puede ser que algún jugador le haya marcado más de un gol a Alemania y no nos interesa que salga repetido el
+mismo jugador por lo que empleamos la función DISTINCT.
+
+- Nos da igual que Alemania sea el primer o el segundo equipo por lo que ponemos la condición de que sea o el primer equipo
+o el segundo.
+
+- Finalmente, damos por hecho que Alemania no se marcaría un gol en propia portería por lo que establecemos que el identificador
+del equipo que marca no sea alemania.
+*/
+```
+
+```SQL
+SELECT teamname, COUNT(matchid)
+FROM eteam JOIN goal ON id=teamid
+GROUP BY teamname;
+
+--Devuelve los equipos y su número de goles marcados.
+
+/*
+Estamos seleccionando una columna que va a contener varias tuplas y luego empleamos una función reductora que devolverá una sola
+tupla, por lo que empleamos la función GROUP BY para que se vayan creando subgrupos en los que concuerden teamname y matchid y así
+la consulta se ejecutará adecuadamente.
+*/
+```
+
+```SQL
+SELECT stadium, COUNT(matchid)
+FROM game JOIN goal ON id = matchid
+GROUP BY stadium;
+
+--Devuelve los estadios y el número de goles marcados en cada uno
+```
+
+```SQL
+SELECT matchid, mdate, COUNT(matchid)
+FROM game JOIN goal ON matchid = id
+WHERE (team1 = 'POL' OR team2 = 'POL')
+GROUP BY matchid, mdate;
+
+--Por cada partido que involucre a Polonia, muestra el id del partido, la fecha y el número de goles marcados.
+```
+
+```SQL
+SELECT matchid, mdate, COUNT(matchid)
+FROM game JOIN goal ON id = matchid
+WHERE (team1 = 'GER' OR team2 = 'GER') AND teamid = 'GER'
+GROUP BY matchid, mdate;
+
+--Por cada partido en el que marcó Alemania, muestra el id del partido, la fecha y el número de goles.
+```
+
+### JOINs concatenados
+
+Supongamos que tenemos las siguientes tablas:
+
+![Columnas actor](img/columna-actor.PNG)
+![Columnas casting](img/columnas-casting.PNG)
+![Columnas movie](img/columnas-movie.PNG)
+
+![Esquema de la BBDD](img/esquema-cinema.PNG)
+
+Si quisiéramos saber todas las películas en las que actuó Harrison Ford unimos las tres tablas, ya que están
+relacionadas (movie y actor con casting) y por separado no contienen todos los datos que precisamos:
+
+```SQL
+SELECT movie.title
+FROM actor JOIN casting ON actor.id = casting.actorid
+           JOIN movie ON movie.id = casting.movieid
+WHERE actor.name = 'Harrison Ford';
+```
+
+- Los predicados pueden cambiarse de lugar ... En el FROM o en el WHERE. En el FROM con ON.
+- Si la BBDD es muy antigua y no permite el ON, la solución sería poner los predicados en el WHERE con AND.
+- Si solo pudiésemos hacer un JOIN, la solución sería hacer subconsultas.
+- Se pueden hacer subconsultas después del JOIN.
+
+```SQL
+SELECT movie.title
+FROM actor JOIN casting JOIN movie
+WHERE actor.name = 'Harrison Ford'
+AND actor.id = casting.actorid
+AND movie.id = casting.movieid;
+```
+
+```SQL
+SELECT actor.name
+FROM actor JOIN casting ON actor.id = casting.actorid
+WHERE casting.movieid IN (
+                          SELECT movie.id
+                          FROM movie
+                          WHERE movie.yr = 1962
+                        )
+AND casting.ord = 1;
+
+--Devuelve los actores que actuaron en películas de 1962 y que tenian el papel principal.
+```
+
+```SQL
+SELECT movie.title
+FROM movie JOIN casting JOIN actor
+WHERE casting.ord <> 1
+AND actor.name = 'Harrison Ford'
+AND actor.id = casting.actorid
+AND movie.id = casting.movieid;
+
+--Devuelve las películas en las que actuó Harrison Ford pero no como actor principal.
+
+--Alternativa:
+
+SELECT movie.title
+FROM movie JOIN casting ON casting.movieid = movie.id
+WHERE ord <> 1 AND casting.actorid = (
+    SELECT actor.id
+    FROM actor
+    WHERE actor.name = 'Harrison Ford'
+)
+```
+
+Los años más ocupados de Rock Hudson:
+
+```SQL
+SELECT yr, COUNT(movie.title)
+FROM movie JOIN casting ON movie.id = casting.movieid
+           JOIN actor   ON casting.actorid = actor.id
+
+WHERE actor.name = 'Rock Hudson'
+GROUP BY movie.yr -- Desaparecen los años en los que no actúa || Tantas tablas como años en las actúa; en los que no, no crea subtablas
+HAVING COUNT(movie.title) > 2;  -- WHERE no podría llevar el COUNT() porque es un reductor, y estos se utilizan con un HAVING o en el SELECT... + GROUP BY---
+```
+
+```SQL
+SELECT movie.title, actor.name
+FROM movie JOIN casting ON movie.id = casting.movieid
+           JOIN actor ON actor.id = casting.actorid
+WHERE casting.ord = 1 AND movie.id IN (SELECT movie.id
+             FROM movie JOIN casting ON casting.movieid = movie.id                                                                                                                                                         JOIN actor ON actorid = actor.id
+             WHERE actor.name = 'Julie Andrews');
+
+--Películas en las que actuó Julie Andrews y su papel principal.
+```
+
+Lista de actores ordenada alfabéticamente, que tienen al menos 30 películas como protagonistas:
+
+```SQL
+SELECT actor.name
+FROM actor JOIN casting ON casting.actorid = actor.id
+WHERE casting.ord = 1
+GROUP BY actor.name
+HAVING COUNT(actor.name) >= 30
+ORDER BY actor.name;
+```
+
+Lista de películas de 1978 ordenadas por número de actores y luego por título:
+
+```SQL
+SELECT movie.title, COUNT(actor.name)
+FROM movie JOIN casting ON casting.movieid = movie.id
+           JOIN actor ON casting.actorid = actor.id
+
+WHERE movie.yr = 1978
+GROUP BY movie.title
+ORDER BY COUNT(actor.name) DESC, movie.title ASC;
+```
+
+Lista de personas que han trabajado con Art Garfunkel:
+
+```SQL
+SELECT DISTINCT A1.name
+FROM actor AS A1 JOIN casting AS C1
+                 ON C1.actorid = A1.id
+                 JOIN casting AS C2
+                 ON C1.movieid = C2.movieid
+                 JOIN actor AS A2
+                 ON A2.id = C2.actorid
+
+WHERE A1.id <> A2.id AND A2.name = 'Art Garfunkel';
+
+/*
+Renombramos las tablas para tener dos instancias de la si misma y luego establecemos que el
+id de los actores no pueda ser el mismo (Art Garfunkel no trabaja consigo mismo) y que el nombre del
+actor de una de las instancias sea Art Garfunkel.
+*/
+```
+
+### INNER JOIN
